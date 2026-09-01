@@ -1,0 +1,10 @@
+{
+  "name": "Conta Conjunta",
+  "short_name": "Conta Conjunta",
+  "description": "Gestão financeira compartilhada para casais.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#01223C",
+  "theme_color": "#01223C",
+  "icons": [{"src":"assets/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
