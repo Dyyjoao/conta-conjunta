@@ -1,0 +1,239 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userPath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    function hasUserProfile() {
+      return signedIn() && exists(userPath());
+    }
+
+    function userHouseholdId() {
+      return get(userPath()).data.householdId;
+    }
+
+    function isMember(householdId) {
+      return hasUserProfile()
+        && userHouseholdId() == householdId;
+    }
+
+    function isOwner(householdId) {
+      return isMember(householdId)
+        && get(
+          /databases/$(database)/documents/households/$(householdId)
+        ).data.members[request.auth.uid].role == 'owner';
+    }
+
+    function joinClaimPath() {
+      return /databases/$(database)/documents/joinClaims/$(request.auth.uid);
+    }
+
+    function validJoinClaim(householdId) {
+      let claim = get(joinClaimPath()).data;
+      let invitePath =
+        /databases/$(database)/documents/invites/$(claim.code);
+
+      return signedIn()
+        && exists(joinClaimPath())
+        && claim.householdId == householdId
+        && exists(invitePath)
+        && get(invitePath).data.householdId == householdId
+        && get(invitePath).data.expiresAt > request.time;
+    }
+
+    match /users/{uid} {
+      allow create: if signedIn()
+        && uid == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          'displayName',
+          'email',
+          'householdId',
+          'createdAt',
+          'updatedAt'
+        ])
+        && getAfter(
+          /databases/$(database)/documents/households/$(request.resource.data.householdId)
+        ).data.members[uid].role in ['owner', 'member'];
+
+      allow read: if signedIn() && (
+        uid == request.auth.uid
+        ||
+        (
+          hasUserProfile()
+          && resource.data.householdId == userHouseholdId()
+        )
+      );
+
+      allow update: if signedIn()
+        && uid == request.auth.uid
+        && request.resource.data.householdId == resource.data.householdId
+        && request.resource.data.email == resource.data.email
+        && request.resource.data
+          .diff(resource.data)
+          .affectedKeys()
+          .hasOnly([
+            'displayName',
+            'updatedAt'
+          ]);
+
+      allow delete: if false;
+    }
+
+    match /households/{householdId} {
+      allow get: if isMember(householdId)
+        || validJoinClaim(householdId)
+        || (
+          signedIn()
+          && resource.data.members[request.auth.uid].role
+            in ['owner', 'member']
+        );
+
+      allow list: if false;
+
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly([
+          'name',
+          'currency',
+          'locale',
+          'createdBy',
+          'createdAt',
+          'updatedAt',
+          'members'
+        ])
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.members.size() == 1
+        && request.resource.data.members[request.auth.uid].role == 'owner';
+
+      allow update: if (
+        isMember(householdId)
+        && request.resource.data
+          .diff(resource.data)
+          .affectedKeys()
+          .hasOnly([
+            'name',
+            'currency',
+            'locale',
+            'updatedAt'
+          ])
+      )
+      ||
+      (
+        signedIn()
+        && validJoinClaim(householdId)
+        && !(request.auth.uid in resource.data.members)
+        && request.resource.data.members.size()
+          == resource.data.members.size() + 1
+        && request.resource.data.members.size() <= 2
+        && request.resource.data.members[request.auth.uid].role == 'member'
+        && request.resource.data
+          .diff(resource.data)
+          .affectedKeys()
+          .hasOnly([
+            'members',
+            'updatedAt'
+          ])
+        && request.resource.data
+          .members
+          .diff(resource.data.members)
+          .affectedKeys()
+          .hasOnly([
+            request.auth.uid
+          ])
+      );
+
+      allow delete: if false;
+
+      match /accounts/{docId} {
+        allow read, create, update, delete: if isMember(householdId);
+      }
+
+      match /categories/{docId} {
+        allow read, create, update, delete: if isMember(householdId);
+      }
+
+      match /transactions/{docId} {
+        allow read, create, update, delete: if isMember(householdId);
+      }
+
+      match /budgets/{docId} {
+        allow read, create, update, delete: if isMember(householdId);
+      }
+
+      match /cards/{docId} {
+        allow read, create, update, delete: if isMember(householdId);
+      }
+
+      match /investments/{docId} {
+        allow read, create, update, delete: if isMember(householdId);
+      }
+
+      match /reserves/{docId} {
+        allow read, create, update, delete: if isMember(householdId);
+      }
+
+      match /ofxImports/{docId} {
+        allow read, create: if isMember(householdId);
+        allow update, delete: if false;
+      }
+    }
+
+    match /invites/{code} {
+      allow get: if signedIn();
+      allow list: if false;
+
+      allow create: if signedIn()
+        && isOwner(
+          request.resource.data.householdId
+        )
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          'householdId',
+          'createdBy',
+          'createdAt',
+          'expiresAt'
+        ]);
+
+      allow update: if false;
+
+      allow delete: if signedIn()
+        && isOwner(
+          resource.data.householdId
+        );
+    }
+
+    match /joinClaims/{uid} {
+      allow create: if signedIn()
+        && uid == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          'code',
+          'householdId',
+          'createdAt'
+        ])
+        && exists(
+          /databases/$(database)/documents/invites/$(request.resource.data.code)
+        )
+        && get(
+          /databases/$(database)/documents/invites/$(request.resource.data.code)
+        ).data.householdId == request.resource.data.householdId
+        && get(
+          /databases/$(database)/documents/invites/$(request.resource.data.code)
+        ).data.expiresAt > request.time;
+
+      allow read, delete: if signedIn()
+        && uid == request.auth.uid;
+
+      allow update: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
