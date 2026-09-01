@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#01223C" />
+  <meta name="description" content="Conta Conjunta — gestão financeira compartilhada para casais." />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="style.css" />
+  <title>Conta Conjunta</title>
+</head>
+<body>
+  <div id="authView" class="center-shell hidden">
+    <section class="auth-card">
+      <div class="brand brand-auth">
+        <div class="brand-mark" aria-hidden="true"><span></span><span></span></div>
+        <div><strong>Conta Conjunta</strong><small>Finanças a dois, numa só visão.</small></div>
+      </div>
+      <div class="auth-tabs" role="tablist">
+        <button class="auth-tab active" data-auth-tab="login">Entrar</button>
+        <button class="auth-tab" data-auth-tab="register">Criar conta</button>
+      </div>
+
+      <form id="loginForm" class="auth-form">
+        <label>E-mail<input id="loginEmail" type="email" autocomplete="email" required /></label>
+        <label>Senha<input id="loginPassword" type="password" autocomplete="current-password" minlength="6" required /></label>
+        <button class="btn primary full" type="submit">Entrar</button>
+      </form>
+
+      <form id="registerForm" class="auth-form hidden">
+        <label>Seu nome<input id="registerName" type="text" maxlength="60" required /></label>
+        <label>E-mail<input id="registerEmail" type="email" autocomplete="email" required /></label>
+        <label>Senha<input id="registerPassword" type="password" autocomplete="new-password" minlength="6" required /></label>
+        <fieldset>
+          <legend>Como quer começar?</legend>
+          <label class="radio-row"><input type="radio" name="registerMode" value="create" checked /> Criar nossa Conta Conjunta</label>
+          <label class="radio-row"><input type="radio" name="registerMode" value="join" /> Entrar com código do casal</label>
+        </fieldset>
+        <label id="householdNameWrap">Nome do casal / casa<input id="householdName" type="text" maxlength="60" placeholder="Ex.: João & Mariana" /></label>
+        <label id="inviteCodeWrap" class="hidden">Código do casal<input id="inviteCode" type="text" maxlength="12" autocomplete="off" placeholder="Ex.: A7K4Q2M8" /></label>
+        <button class="btn primary full" type="submit">Criar acesso</button>
+      </form>
+      <p id="authError" class="form-error"></p>
+    </section>
+  </div>
+
+  <div id="appView" class="app-shell hidden">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"><span></span><span></span></div>
+        <div><strong>Conta Conjunta</strong><small id="householdNameLabel">Nossa casa</small></div>
+      </div>
+      <nav id="mainNav" class="main-nav">
+        <button class="nav-item active" data-page="dashboard">Visão do mês</button>
+        <button class="nav-item" data-page="transactions">Lançamentos</button>
+        <button class="nav-item" data-page="statement">Extrato</button>
+        <button class="nav-item" data-page="cashflow">Fluxo de caixa</button>
+        <button class="nav-item" data-page="budget">Orçamento</button>
+        <button class="nav-item" data-page="cards">Cartões</button>
+        <button class="nav-item" data-page="investments">Investimentos</button>
+        <button class="nav-item" data-page="reserves">Reservas</button>
+        <button class="nav-item" data-page="settings">Configurações</button>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-chip"><span id="userInitials">CC</span><div><strong id="userNameLabel">Usuário</strong><small id="userRoleLabel">Membro</small></div></div>
+        <button id="logoutBtn" class="btn ghost full">Sair</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <button id="menuBtn" class="icon-btn mobile-only" aria-label="Abrir menu">☰</button>
+        <div><div class="eyebrow" id="pageEyebrow">VISÃO GERENCIAL</div><h1 id="pageTitle">Visão do mês</h1></div>
+        <div class="topbar-actions"><span id="syncBadge" class="sync-badge">Firebase</span><button id="quickAddBtn" class="btn primary">+ Lançamento</button></div>
+      </header>
+
+      <section id="pageContent" class="page-content"></section>
+    </main>
+  </div>
+
+  <dialog id="transactionDialog" class="modal">
+    <form id="transactionForm" method="dialog" class="modal-card">
+      <div class="modal-header"><div><div class="eyebrow">MOVIMENTAÇÃO</div><h2 id="transactionDialogTitle">Novo lançamento</h2></div><button type="button" class="icon-btn" data-close-dialog>×</button></div>
+      <input id="transactionId" type="hidden" />
+      <div class="form-grid two">
+        <label>Tipo<select id="txType"><option value="expense">Despesa</option><option value="income">Receita</option></select></label>
+        <label>Data<input id="txDate" type="date" required /></label>
+      </div>
+      <label>Descrição<input id="txDescription" type="text" maxlength="100" required /></label>
+      <div class="form-grid two">
+        <label>Valor<input id="txAmount" type="number" min="0.01" step="0.01" inputmode="decimal" required /></label>
+        <label>Status<select id="txStatus"><option value="paid">Realizado</option><option value="planned">Previsto</option></select></label>
+      </div>
+      <div class="form-grid two">
+        <label>Conta<select id="txAccount" required></select></label>
+        <label>Categoria<select id="txCategory" required></select></label>
+      </div>
+      <label>Responsabilidade<select id="txScope"><option value="shared">Compartilhada</option><option value="personal">Pessoal</option></select></label>
+      <label>Observação<textarea id="txNotes" rows="3" maxlength="300"></textarea></label>
+      <div class="modal-actions"><button type="button" class="btn ghost" data-close-dialog>Cancelar</button><button type="submit" class="btn primary">Salvar</button></div>
+      <p id="transactionError" class="form-error"></p>
+    </form>
+  </dialog>
+
+  <dialog id="accountDialog" class="modal">
+    <form id="accountForm" method="dialog" class="modal-card">
+      <div class="modal-header"><div><div class="eyebrow">CONTA FINANCEIRA</div><h2>Nova conta</h2></div><button type="button" class="icon-btn" data-close-dialog>×</button></div>
+      <label>Nome<input id="accountName" type="text" maxlength="60" required /></label>
+      <div class="form-grid two">
+        <label>Tipo<select id="accountType"><option value="checking">Conta corrente</option><option value="wallet">Carteira</option><option value="savings">Poupança</option><option value="investment">Investimento</option></select></label>
+        <label>Saldo inicial<input id="accountInitialBalance" type="number" step="0.01" value="0" /></label>
+      </div>
+      <label>Titularidade<select id="accountOwnership"><option value="joint">Conjunta</option><option value="personal">Pessoal</option></select></label>
+      <div class="modal-actions"><button type="button" class="btn ghost" data-close-dialog>Cancelar</button><button type="submit" class="btn primary">Salvar</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="budgetDialog" class="modal">
+    <form id="budgetForm" method="dialog" class="modal-card">
+      <div class="modal-header"><div><div class="eyebrow">ORÇAMENTO</div><h2>Definir limite mensal</h2></div><button type="button" class="icon-btn" data-close-dialog>×</button></div>
+      <label>Categoria<select id="budgetCategory" required></select></label>
+      <label>Limite mensal<input id="budgetAmount" type="number" min="0.01" step="0.01" required /></label>
+      <div class="modal-actions"><button type="button" class="btn ghost" data-close-dialog>Cancelar</button><button type="submit" class="btn primary">Salvar</button></div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast hidden" role="status"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
