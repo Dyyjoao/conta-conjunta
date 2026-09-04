@@ -1,4 +1,3 @@
-import './features-loader.js';
 import { firebaseConfig } from './firebase-config.js';
 const SDK='11.10.0';
 const money=v=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(v||0));
