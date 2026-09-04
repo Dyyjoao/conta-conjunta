@@ -1,11 +1,13 @@
-const CACHE = 'conta-conjunta-v0.5.2';
+const CACHE = 'conta-conjunta-v0.5.3';
 const CORE = [
   './',
   'index.html',
   'style.css',
   'enhancements.css',
   'features.css',
+  'boot-guard.js',
   'app.js',
+  'post-login-loader.js',
   'dashboard-enhancements.js',
   'categories-enhancements.js',
   'features-loader.js',
