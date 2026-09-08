@@ -1,5 +1,6 @@
 const style=document.createElement('link');style.rel='stylesheet';style.href='./features.css';style.dataset.ccFeatures='1';if(!document.querySelector('link[data-cc-features]'))document.head.appendChild(style);
 Promise.all([
+ import('./shared-privacy-guard.js'),
  import('./ofx-enhancements.js'),
  import('./cards-enhancements.js'),
  import('./cards-reversal-enhancements.js'),
