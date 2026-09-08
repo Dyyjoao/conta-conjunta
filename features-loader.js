@@ -7,6 +7,7 @@ Promise.all([
  import('./reserves-enhancements.js'),
  import('./accounts-enhancements.js'),
  import('./transactions-enhancements.js'),
+ import('./transaction-series-enhancements.js'),
  import('./income-expense-pages.js'),
  import('./planning-enhancements.js'),
  import('./cashflow-enhancements.js')
