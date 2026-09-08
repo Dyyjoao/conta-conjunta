@@ -6,5 +6,7 @@ Promise.all([
  import('./reserves-enhancements.js'),
  import('./accounts-enhancements.js'),
  import('./transactions-enhancements.js'),
- import('./income-expense-pages.js')
+ import('./income-expense-pages.js'),
+ import('./planning-enhancements.js'),
+ import('./cashflow-enhancements.js')
 ]).catch(err=>console.error('Falha ao carregar módulos do Conta Conjunta',err));
