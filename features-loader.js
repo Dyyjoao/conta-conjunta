@@ -2,6 +2,7 @@ const style=document.createElement('link');style.rel='stylesheet';style.href='./
 Promise.all([
  import('./ofx-enhancements.js'),
  import('./cards-enhancements.js'),
+ import('./cards-reversal-enhancements.js'),
  import('./investments-enhancements.js'),
  import('./reserves-enhancements.js'),
  import('./accounts-enhancements.js'),
