@@ -19,16 +19,23 @@ service cloud.firestore {
       return get(userPath()).data.householdId;
     }
 
+    function householdPath(householdId) {
+      return /databases/$(database)/documents/households/$(householdId);
+    }
+
     function isMember(householdId) {
       return hasUserProfile()
         && userHouseholdId() == householdId;
     }
 
+    function isHouseholdUser(householdId, uid) {
+      return exists(householdPath(householdId))
+        && uid in get(householdPath(householdId)).data.members;
+    }
+
     function isOwner(householdId) {
       return isMember(householdId)
-        && get(
-          /databases/$(database)/documents/households/$(householdId)
-        ).data.members[request.auth.uid].role == 'owner';
+        && get(householdPath(householdId)).data.members[request.auth.uid].role == 'owner';
     }
 
     function joinClaimPath() {
@@ -37,8 +44,7 @@ service cloud.firestore {
 
     function validJoinClaim(householdId) {
       let claim = get(joinClaimPath()).data;
-      let invitePath =
-        /databases/$(database)/documents/invites/$(claim.code);
+      let invitePath = /databases/$(database)/documents/invites/$(claim.code);
 
       return signedIn()
         && exists(joinClaimPath())
@@ -52,11 +58,7 @@ service cloud.firestore {
       allow create: if signedIn()
         && uid == request.auth.uid
         && request.resource.data.keys().hasOnly([
-          'displayName',
-          'email',
-          'householdId',
-          'createdAt',
-          'updatedAt'
+          'displayName','email','householdId','createdAt','updatedAt'
         ])
         && getAfter(
           /databases/$(database)/documents/households/$(request.resource.data.householdId)
@@ -64,8 +66,7 @@ service cloud.firestore {
 
       allow read: if signedIn() && (
         uid == request.auth.uid
-        ||
-        (
+        || (
           hasUserProfile()
           && resource.data.householdId == userHouseholdId()
         )
@@ -75,13 +76,9 @@ service cloud.firestore {
         && uid == request.auth.uid
         && request.resource.data.householdId == resource.data.householdId
         && request.resource.data.email == resource.data.email
-        && request.resource.data
-          .diff(resource.data)
-          .affectedKeys()
-          .hasOnly([
-            'displayName',
-            'updatedAt'
-          ]);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'displayName','updatedAt'
+        ]);
 
       allow delete: if false;
     }
@@ -91,21 +88,14 @@ service cloud.firestore {
         || validJoinClaim(householdId)
         || (
           signedIn()
-          && resource.data.members[request.auth.uid].role
-            in ['owner', 'member']
+          && resource.data.members[request.auth.uid].role in ['owner', 'member']
         );
 
       allow list: if false;
 
       allow create: if signedIn()
         && request.resource.data.keys().hasOnly([
-          'name',
-          'currency',
-          'locale',
-          'createdBy',
-          'createdAt',
-          'updatedAt',
-          'members'
+          'name','currency','locale','createdBy','createdAt','updatedAt','members'
         ])
         && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.members.size() == 1
@@ -113,45 +103,34 @@ service cloud.firestore {
 
       allow update: if (
         isMember(householdId)
-        && request.resource.data
-          .diff(resource.data)
-          .affectedKeys()
-          .hasOnly([
-            'name',
-            'currency',
-            'locale',
-            'updatedAt'
-          ])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name','currency','locale','updatedAt'
+        ])
       )
-      ||
-      (
+      || (
         signedIn()
         && validJoinClaim(householdId)
         && !(request.auth.uid in resource.data.members)
-        && request.resource.data.members.size()
-          == resource.data.members.size() + 1
+        && request.resource.data.members.size() == resource.data.members.size() + 1
         && request.resource.data.members.size() <= 2
         && request.resource.data.members[request.auth.uid].role == 'member'
-        && request.resource.data
-          .diff(resource.data)
-          .affectedKeys()
-          .hasOnly([
-            'members',
-            'updatedAt'
-          ])
-        && request.resource.data
-          .members
-          .diff(resource.data.members)
-          .affectedKeys()
-          .hasOnly([
-            request.auth.uid
-          ])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'members','updatedAt'
+        ])
+        && request.resource.data.members.diff(resource.data.members).affectedKeys().hasOnly([
+          request.auth.uid
+        ])
       );
 
       allow delete: if false;
 
+      // BASE COMPARTILHADA DO CASAL
       match /accounts/{docId} {
-        allow read, create, update, delete: if isMember(householdId);
+        allow read: if isMember(householdId);
+        allow create, update: if isMember(householdId)
+          && request.resource.data.ownership != 'personal';
+        allow delete: if isMember(householdId)
+          && resource.data.ownership != 'personal';
       }
 
       match /categories/{docId} {
@@ -159,7 +138,11 @@ service cloud.firestore {
       }
 
       match /transactions/{docId} {
-        allow read, create, update, delete: if isMember(householdId);
+        allow read: if isMember(householdId);
+        allow create, update: if isMember(householdId)
+          && request.resource.data.scope == 'shared';
+        allow delete: if isMember(householdId)
+          && resource.data.scope == 'shared';
       }
 
       match /budgets/{docId} {
@@ -182,6 +165,38 @@ service cloud.firestore {
         allow read, create: if isMember(householdId);
         allow update, delete: if false;
       }
+
+      // ÁREA PRIVADA DE CADA MEMBRO DO CASAL
+      // O outro membro não consegue ler os documentos daqui.
+      match /private/{ownerId}/accounts/{docId} {
+        allow read, update, delete: if isMember(householdId)
+          && request.auth.uid == ownerId;
+
+        // Permite que um membro cadastre uma conta pessoal para o outro,
+        // mas após criada somente o responsável consegue lê-la/alterá-la.
+        allow create: if isMember(householdId)
+          && isHouseholdUser(householdId, ownerId)
+          && request.resource.data.ownerId == ownerId
+          && request.resource.data.ownership == 'personal';
+      }
+
+      match /private/{ownerId}/transactions/{docId} {
+        allow read, create, update, delete: if isMember(householdId)
+          && request.auth.uid == ownerId
+          && (
+            request.method == 'delete'
+            || request.resource.data.ownerId == ownerId
+          );
+      }
+
+      match /private/{ownerId}/cards/{docId} {
+        allow read, create, update, delete: if isMember(householdId)
+          && request.auth.uid == ownerId
+          && (
+            request.method == 'delete'
+            || request.resource.data.ownerId == ownerId
+          );
+      }
     }
 
     match /invites/{code} {
@@ -189,32 +204,23 @@ service cloud.firestore {
       allow list: if false;
 
       allow create: if signedIn()
-        && isOwner(
-          request.resource.data.householdId
-        )
+        && isOwner(request.resource.data.householdId)
         && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.keys().hasOnly([
-          'householdId',
-          'createdBy',
-          'createdAt',
-          'expiresAt'
+          'householdId','createdBy','createdAt','expiresAt'
         ]);
 
       allow update: if false;
 
       allow delete: if signedIn()
-        && isOwner(
-          resource.data.householdId
-        );
+        && isOwner(resource.data.householdId);
     }
 
     match /joinClaims/{uid} {
       allow create: if signedIn()
         && uid == request.auth.uid
         && request.resource.data.keys().hasOnly([
-          'code',
-          'householdId',
-          'createdAt'
+          'code','householdId','createdAt'
         ])
         && exists(
           /databases/$(database)/documents/invites/$(request.resource.data.code)
