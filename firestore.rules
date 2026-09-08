@@ -124,7 +124,6 @@ service cloud.firestore {
 
       allow delete: if false;
 
-      // BASE COMPARTILHADA DO CASAL
       match /accounts/{docId} {
         allow read: if isMember(householdId);
         allow create, update: if isMember(householdId)
@@ -166,14 +165,10 @@ service cloud.firestore {
         allow update, delete: if false;
       }
 
-      // ÁREA PRIVADA DE CADA MEMBRO DO CASAL
-      // O outro membro não consegue ler os documentos daqui.
       match /private/{ownerId}/accounts/{docId} {
         allow read, update, delete: if isMember(householdId)
           && request.auth.uid == ownerId;
 
-        // Permite que um membro cadastre uma conta pessoal para o outro,
-        // mas após criada somente o responsável consegue lê-la/alterá-la.
         allow create: if isMember(householdId)
           && isHouseholdUser(householdId, ownerId)
           && request.resource.data.ownerId == ownerId
@@ -181,21 +176,21 @@ service cloud.firestore {
       }
 
       match /private/{ownerId}/transactions/{docId} {
-        allow read, create, update, delete: if isMember(householdId)
+        allow read, delete: if isMember(householdId)
+          && request.auth.uid == ownerId;
+
+        allow create, update: if isMember(householdId)
           && request.auth.uid == ownerId
-          && (
-            request.method == 'delete'
-            || request.resource.data.ownerId == ownerId
-          );
+          && request.resource.data.ownerId == ownerId;
       }
 
       match /private/{ownerId}/cards/{docId} {
-        allow read, create, update, delete: if isMember(householdId)
+        allow read, delete: if isMember(householdId)
+          && request.auth.uid == ownerId;
+
+        allow create, update: if isMember(householdId)
           && request.auth.uid == ownerId
-          && (
-            request.method == 'delete'
-            || request.resource.data.ownerId == ownerId
-          );
+          && request.resource.data.ownerId == ownerId;
       }
     }
 
