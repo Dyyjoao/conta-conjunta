@@ -1,12 +1,10 @@
 const style=document.createElement('link');style.rel='stylesheet';style.href='./features.css';style.dataset.ccFeatures='1';if(!document.querySelector('link[data-cc-features]'))document.head.appendChild(style);
 Promise.all([
- import('./shared-privacy-guard.js'),
  import('./ofx-enhancements.js'),
  import('./cards-enhancements.js'),
  import('./cards-reversal-enhancements.js'),
  import('./investments-enhancements.js'),
  import('./reserves-enhancements.js'),
- import('./personal-finance-enhancements.js'),
  import('./accounts-enhancements.js'),
  import('./transactions-enhancements.js'),
  import('./transaction-series-enhancements.js'),
