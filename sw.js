@@ -1,4 +1,4 @@
-const CACHE = 'conta-conjunta-v0.7.2';
+const CACHE = 'conta-conjunta-v0.7.3';
 const CORE = [
   './',
   'index.html',
@@ -11,13 +11,11 @@ const CORE = [
   'dashboard-enhancements.js',
   'categories-enhancements.js',
   'features-loader.js',
-  'shared-privacy-guard.js',
   'ofx-enhancements.js',
   'cards-enhancements.js',
   'cards-reversal-enhancements.js',
   'investments-enhancements.js',
   'reserves-enhancements.js',
-  'personal-finance-enhancements.js',
   'accounts-enhancements.js',
   'transactions-enhancements.js',
   'transaction-series-enhancements.js',
