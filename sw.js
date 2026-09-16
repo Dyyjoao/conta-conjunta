@@ -1,4 +1,4 @@
-const CACHE = 'conta-conjunta-v0.7.1';
+const CACHE = 'conta-conjunta-v0.7.2';
 const CORE = [
   './',
   'index.html',
